@@ -5,7 +5,12 @@
 IMAGE_NAME := retroarch-psc
 OUTPUT_DIR := retroarch_bin
 
-.PHONY: all build extract clean shell
+# Version: RetroArch version from Dockerfile + build number from git tag
+RA_VERSION := $(shell grep -oP 'ARG RETROARCH_VERSION=\K[^\s]+' Dockerfile)
+BUILD_NUM := $(shell git describe --tags --abbrev=0 2>/dev/null | grep -oP '\d+$$' || echo "1")
+VERSION := $(RA_VERSION)-$(BUILD_NUM)
+
+.PHONY: all build extract package clean shell version
 
 # Default target
 all: build extract
@@ -32,6 +37,17 @@ extract:
 # Interactive shell for debugging
 shell:
 	docker run --rm -it $(IMAGE_NAME) /bin/bash
+
+# Package binary for release
+package: extract
+	@cd $(OUTPUT_DIR) && zip retroarch-psc-$(VERSION).zip retroarch
+	@echo "Created $(OUTPUT_DIR)/retroarch-psc-$(VERSION).zip"
+
+# Show version info
+version:
+	@echo "RetroArch: $(RA_VERSION)"
+	@echo "Build: $(BUILD_NUM)"
+	@echo "Package: retroarch-psc-$(VERSION).zip"
 
 # Clean everything
 clean:
