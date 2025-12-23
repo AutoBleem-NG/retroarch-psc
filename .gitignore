@@ -1,0 +1,8 @@
+# Build outputs
+/retroarch_bin/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
