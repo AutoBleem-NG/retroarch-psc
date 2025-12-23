@@ -10,7 +10,7 @@ RA_VERSION := $(shell grep -oP 'ARG RETROARCH_VERSION=\K[^\s]+' Dockerfile)
 BUILD_NUM := $(shell git describe --tags --abbrev=0 2>/dev/null | grep -oP '\d+$$' || echo "1")
 VERSION := $(RA_VERSION)-$(BUILD_NUM)
 
-.PHONY: all build extract package clean shell version
+.PHONY: all build extract package release clean shell version
 
 # Default target
 all: build extract
@@ -42,6 +42,9 @@ shell:
 package: extract
 	@cd $(OUTPUT_DIR) && zip retroarch-psc-$(VERSION).zip retroarch
 	@echo "Created $(OUTPUT_DIR)/retroarch-psc-$(VERSION).zip"
+
+# Full release: build + package
+release: build package
 
 # Show version info
 version:

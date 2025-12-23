@@ -21,6 +21,7 @@ ls retroarch_bin/retroarch
 | `make build` | Build Docker image only |
 | `make extract` | Extract binary from image |
 | `make package` | Extract and zip for release |
+| `make release` | Build + package (full release) |
 | `make version` | Show version info |
 | `make shell` | Interactive container shell |
 | `make clean` | Remove binary and image |
@@ -47,13 +48,14 @@ v1.23.0-1    # First release of RetroArch v1.23.0
 ### Creating a Release
 
 ```bash
-# Update RETROARCH_VERSION in Dockerfile if needed
-# Then tag and push:
+# Tag the release
 git tag v1.22.2-1
-git push origin v1.22.2-1
-```
 
-GitHub Actions will automatically build and publish the release.
+# Build and package
+make release
+
+# Output: retroarch_bin/retroarch-psc-v1.22.2-1.zip
+```
 
 ## Configuration
 
