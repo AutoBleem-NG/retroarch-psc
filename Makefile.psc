@@ -2,6 +2,11 @@
 # Based on Makefile.classic_snesc from libretro/RetroArch
 # Modified by AutoBleem-NG for PSC-specific optimizations
 #
+# Note: HAVE_C_A7A7 is intentionally NOT used — it targets Cortex-A7/ARMv7
+# (NES/SNES Classic) and would override the correct Cortex-A35/ARMv8-A flags.
+# HAVE_CLASSIC=1 is kept as it only adds -DHAVE_CLASSIC (currently a no-op
+# in upstream v1.22.2 C source, but harmless).
+#
 # Features enabled to match original PSC binary:
 # - SDL2 for input/joystick support
 # - Wayland for display
@@ -55,7 +60,7 @@ retroarch:
 		--enable-floathard \
 		--enable-sdl2 \
 		--disable-discord && \
-	make HAVE_CLASSIC=1 HAVE_C_A7A7=1 -j && \
+	make HAVE_CLASSIC=1 -j && \
 	/opt/x-tools/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -v retroarch
 
 clean:
