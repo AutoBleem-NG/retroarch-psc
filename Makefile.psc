@@ -42,7 +42,10 @@ retroarch:
 		-O3 -fomit-frame-pointer -ffunction-sections -fdata-sections \
 		-funroll-loops -ftree-vectorize \
 		-I/usr/include/arm-linux-gnueabihf -I/usr/include/arm-linux-gnueabihf/SDL2" && \
-	export LDFLAGS="-L/usr/lib/arm-linux-gnueabihf -Wl,-rpath-link,/usr/lib/arm-linux-gnueabihf -Wl,--as-needed -Wl,--allow-shlib-undefined -static-libstdc++ -static-libgcc" && \
+	export LDFLAGS="-L/opt/x-tools/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib \
+		-Wl,-rpath-link,/opt/x-tools/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot/lib \
+		-L/usr/lib/arm-linux-gnueabihf -Wl,-rpath-link,/usr/lib/arm-linux-gnueabihf \
+		-Wl,--as-needed -Wl,--allow-shlib-undefined -static-libstdc++ -static-libgcc" && \
 	./configure \
 		--host=arm-linux-gnueabihf \
 		--disable-pulse \

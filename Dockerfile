@@ -165,8 +165,8 @@ ENV AR=arm-linux-gnueabihf-ar
 ENV PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig
 ENV PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig
 ENV PKG_CONFIG=/usr/bin/arm-linux-gnueabihf-pkg-config
-ENV LDFLAGS="-L/usr/lib/arm-linux-gnueabihf -Wl,-rpath-link,/usr/lib/arm-linux-gnueabihf"
-ENV LIBRARY_PATH=/usr/lib/arm-linux-gnueabihf
+ENV LDFLAGS="-L/opt/x-tools/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib -Wl,-rpath-link,/opt/x-tools/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot/lib -L/usr/lib/arm-linux-gnueabihf -Wl,-rpath-link,/usr/lib/arm-linux-gnueabihf"
+ENV LIBRARY_PATH=/opt/x-tools/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib:/opt/x-tools/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot/lib:/usr/lib/arm-linux-gnueabihf
 
 # Create dummy immintrin.h for SDL2 (SDL 2.0.8 has x86 intrinsics includes without ARM guards)
 RUN mkdir -p /opt/arm-compat-headers && \
@@ -175,10 +175,10 @@ RUN mkdir -p /opt/arm-compat-headers && \
 # Create wrapper scripts that point crosstool-ng compiler to Ubuntu's ARM libraries
 # Note: SDL2 headers go in /usr/include/SDL2/ (arch-independent) not armhf-specific path
 RUN echo '#!/bin/bash' > /usr/bin/psc-gcc && \
-    echo 'exec /opt/x-tools/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc -I/opt/arm-compat-headers -I/usr/include/SDL2 -idirafter /usr/include -idirafter /usr/include/arm-linux-gnueabihf -L/usr/lib/arm-linux-gnueabihf "$@"' >> /usr/bin/psc-gcc && \
+    echo 'exec /opt/x-tools/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc -I/opt/arm-compat-headers -I/usr/include/SDL2 -idirafter /usr/include -idirafter /usr/include/arm-linux-gnueabihf -L/opt/x-tools/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib -L/usr/lib/arm-linux-gnueabihf "$@"' >> /usr/bin/psc-gcc && \
     chmod +x /usr/bin/psc-gcc && \
     echo '#!/bin/bash' > /usr/bin/psc-g++ && \
-    echo 'exec /opt/x-tools/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ -I/opt/arm-compat-headers -I/usr/include/SDL2 -idirafter /usr/include -idirafter /usr/include/arm-linux-gnueabihf -L/usr/lib/arm-linux-gnueabihf "$@"' >> /usr/bin/psc-g++ && \
+    echo 'exec /opt/x-tools/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ -I/opt/arm-compat-headers -I/usr/include/SDL2 -idirafter /usr/include -idirafter /usr/include/arm-linux-gnueabihf -L/opt/x-tools/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib -L/usr/lib/arm-linux-gnueabihf "$@"' >> /usr/bin/psc-g++ && \
     chmod +x /usr/bin/psc-g++
 
 # Fix ARM library symlinks and pkg-config files
