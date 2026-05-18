@@ -28,6 +28,7 @@ Full driver/menu matrix and troubleshooting: [docs/psc-configuration.md](docs/ps
 - `alsa_force_s16_psc_mtk.patch` — forces ALSA S16_LE on PSC's MT8167 (which mis-advertises FLOAT support).
 - `wl_shell_fallback.patch` — Wayland fallback for PSC's Weston 1.11 (no `xdg_shell`).
 - `xmb_ribbon_drop_oes_derivatives_ext.patch` — fixes the XMB ribbon shader on PowerVR Rogue.
+- `xmb_shader_pipeline_psc_limit.patch` — hides pipeline options too slow for PSC; only "Off" and "Ribbon Simplified" are exposed.
 
 See [docs/psc-configuration.md](docs/psc-configuration.md) for the why.
 

@@ -1,0 +1,21 @@
+Limit XMB shader pipeline menu to Off and Ribbon Simplified on PSC.
+
+The PSC's PowerVR Rogue GE8300 is too slow for any pipeline beyond
+XMB_SHADER_PIPELINE_SIMPLE_RIBBON. The full ribbon, snow, bokeh, and
+snowflake options all drop framerate to unacceptable levels; exposing them
+only invites users to accidentally select a broken setting. Cap the menu
+range at SIMPLE_RIBBON so only the two usable choices are visible.
+
+diff --git a/menu/menu_setting.c b/menu/menu_setting.c
+index 6371398..da91d8f 100644
+--- a/menu/menu_setting.c
++++ b/menu/menu_setting.c
+@@ -19146,7 +19146,7 @@ static bool setting_append_list(
+                   (*list)[list_info->index - 1].action_ok = &setting_action_ok_uint;
+                   (*list)[list_info->index - 1].get_string_representation =
+                      &setting_get_string_representation_uint_xmb_shader_pipeline;
+-                  menu_settings_list_current_add_range(list, list_info, 0, XMB_SHADER_PIPELINE_LAST-1, 1, true, true);
++                  menu_settings_list_current_add_range(list, list_info, 0, XMB_SHADER_PIPELINE_SIMPLE_RIBBON, 1, true, true);
+                   (*list)[list_info->index - 1].ui_type   = ST_UI_TYPE_UINT_COMBOBOX;
+                }
+             }

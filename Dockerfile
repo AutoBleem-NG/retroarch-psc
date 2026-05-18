@@ -244,6 +244,12 @@ RUN git apply /build/RetroArch/patches/wl_shell_fallback.patch
 COPY patches/xmb_ribbon_drop_oes_derivatives_ext.patch /build/RetroArch/patches/xmb_ribbon_drop_oes_derivatives_ext.patch
 RUN git apply /build/RetroArch/patches/xmb_ribbon_drop_oes_derivatives_ext.patch
 
+# Hide shader pipeline options that are too slow for PSC (PowerVR Rogue
+# GE8300): only "Off" and "Ribbon Simplified" are usable; cap the menu
+# range at XMB_SHADER_PIPELINE_SIMPLE_RIBBON.
+COPY patches/xmb_shader_pipeline_psc_limit.patch /build/RetroArch/patches/xmb_shader_pipeline_psc_limit.patch
+RUN git apply /build/RetroArch/patches/xmb_shader_pipeline_psc_limit.patch
+
 # Force S16_LE for ALSA: the PSC's MT8167 driver falsely reports FLOAT as
 # supported via test_format, then rejects it with EINVAL in snd_pcm_hw_params.
 # RA has no retry path, so audio init fails entirely without this patch.
