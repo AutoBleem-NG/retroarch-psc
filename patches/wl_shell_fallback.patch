@@ -1,0 +1,202 @@
+diff --git a/gfx/common/wayland_common.c b/gfx/common/wayland_common.c
+index afa0b51..cb8e6b6 100644
+--- a/gfx/common/wayland_common.c
++++ b/gfx/common/wayland_common.c
+@@ -82,6 +82,61 @@ static const unsigned long retroarch_icon_data[] = {
+ 0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000
+ };
+ 
++/* Legacy wl_shell fallback (compositors without xdg_shell, e.g. PSC Weston 1.11). */
++static void wl_shell_surface_handle_ping(void *data,
++      struct wl_shell_surface *shell_surface, uint32_t serial)
++{
++   (void)data;
++   wl_shell_surface_pong(shell_surface, serial);
++}
++
++static void wl_shell_surface_handle_configure(void *data,
++      struct wl_shell_surface *shell_surface, uint32_t edges,
++      int32_t width, int32_t height)
++{
++   gfx_ctx_wayland_data_t *wl = (gfx_ctx_wayland_data_t*)data;
++   (void)shell_surface;
++   (void)edges;
++   if (wl->ignore_configuration)
++      return;
++   if (width == 0 || height == 0)
++   {
++      width  = wl->floating_width;
++      height = wl->floating_height;
++   }
++   if (width > 0 && height > 0)
++   {
++      wl->width         = width;
++      wl->height        = height;
++      wl->buffer_width  = wl->fractional_scale ?
++         FRACTIONAL_SCALE_MULT(wl->width,  wl->fractional_scale_num) : wl->width  * wl->buffer_scale;
++      wl->buffer_height = wl->fractional_scale ?
++         FRACTIONAL_SCALE_MULT(wl->height, wl->fractional_scale_num) : wl->height * wl->buffer_scale;
++      wl->resize        = true;
++      if (wl->viewport)
++      {
++         wp_viewport_set_destination(wl->viewport, wl->width, wl->height);
++         wl_surface_commit(wl->surface);
++      }
++      wl->floating_width  = width;
++      wl->floating_height = height;
++   }
++   wl->configured = false;
++}
++
++static void wl_shell_surface_handle_popup_done(void *data,
++      struct wl_shell_surface *shell_surface)
++{
++   (void)data;
++   (void)shell_surface;
++}
++
++static const struct wl_shell_surface_listener wl_shell_surface_listener = {
++   wl_shell_surface_handle_ping,
++   wl_shell_surface_handle_configure,
++   wl_shell_surface_handle_popup_done,
++};
++
+ void xdg_toplevel_handle_configure_common(gfx_ctx_wayland_data_t *wl,
+       void *toplevel,
+       int32_t width, int32_t height, struct wl_array *states)
+@@ -293,6 +348,8 @@ void gfx_ctx_wl_destroy_resources_common(gfx_ctx_wayland_data_t *wl)
+       zwp_idle_inhibitor_v1_destroy(wl->idle_inhibitor);
+    if (wl->deco)
+       zxdg_toplevel_decoration_v1_destroy(wl->deco);
++   if (wl->wl_shell_surface)
++      wl_shell_surface_destroy(wl->wl_shell_surface);
+    if (wl->xdg_toplevel)
+       xdg_toplevel_destroy(wl->xdg_toplevel);
+    if (wl->xdg_toplevel_icon_manager)
+@@ -333,6 +390,8 @@ void gfx_ctx_wl_destroy_resources_common(gfx_ctx_wayland_data_t *wl)
+       wl_seat_destroy(wl->seat);
+    if (wl->xdg_shell)
+       xdg_wm_base_destroy(wl->xdg_shell);
++   if (wl->wl_shell)
++      wl_shell_destroy(wl->wl_shell);
+    if (wl->data_device_manager)
+       wl_data_device_manager_destroy (wl->data_device_manager);
+    while (!wl_list_empty(&wl->current_outputs))
+@@ -373,6 +432,8 @@ void gfx_ctx_wl_destroy_resources_common(gfx_ctx_wayland_data_t *wl)
+    wl->shm                       = NULL;
+    wl->data_device_manager       = NULL;
+    wl->xdg_shell                 = NULL;
++   wl->wl_shell                  = NULL;
++   wl->wl_shell_surface          = NULL;
+    wl->seat                      = NULL;
+    wl->relative_pointer_manager  = NULL;
+    wl->pointer_constraints       = NULL;
+@@ -422,10 +483,15 @@ void gfx_ctx_wl_update_title_common(void *data)
+       {
+          if (title[0])
+          {
+-            if (wl->deco)
+-               zxdg_toplevel_decoration_v1_set_mode(wl->deco,
+-                     ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+-            xdg_toplevel_set_title(wl->xdg_toplevel, title);
++            if (wl->xdg_toplevel)
++            {
++               if (wl->deco)
++                  zxdg_toplevel_decoration_v1_set_mode(wl->deco,
++                        ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
++               xdg_toplevel_set_title(wl->xdg_toplevel, title);
++            }
++            else if (wl->wl_shell_surface)
++               wl_shell_surface_set_title(wl->wl_shell_surface, title);
+          }
+       }
+    }
+@@ -774,11 +840,13 @@ bool gfx_ctx_wl_init_common(
+       return false;
+    }
+ 
+-   if (!wl->xdg_shell)
++   if (!wl->xdg_shell && !wl->wl_shell)
+    {
+       RARCH_ERR("[Wayland] Failed to create shell.\n");
+       return false;
+    }
++   if (!wl->xdg_shell)
++      RARCH_WARN("[Wayland] xdg_shell unavailable; falling back to deprecated wl_shell.\n");
+ 
+    if (!wl->idle_inhibit_manager)
+    {
+@@ -889,6 +957,7 @@ bool gfx_ctx_wl_init_common(
+    }
+    else
+ #endif
++   if (wl->xdg_shell)
+    {
+       wl->xdg_surface = xdg_wm_base_get_xdg_surface(wl->xdg_shell, wl->surface);
+       xdg_surface_add_listener(wl->xdg_surface, &xdg_surface_listener, wl);
+@@ -913,9 +982,21 @@ bool gfx_ctx_wl_init_common(
+       while (wl->configured)
+          wl_display_dispatch(wl->input.dpy);
+    }
++   else
++   {
++      /* wl_shell fallback: no startup configure handshake. */
++      wl->wl_shell_surface = wl_shell_get_shell_surface(wl->wl_shell, wl->surface);
++      wl_shell_surface_add_listener(wl->wl_shell_surface, &wl_shell_surface_listener, wl);
++      wl_shell_surface_set_toplevel(wl->wl_shell_surface);
++      wl_shell_surface_set_class(wl->wl_shell_surface, WAYLAND_APP_ID);
++      wl_shell_surface_set_title(wl->wl_shell_surface, WINDOW_TITLE);
++      wl_surface_commit(wl->surface);
++      wl->configured = false;
++   }
+ 
+    wl_display_roundtrip(wl->input.dpy);
+-   xdg_wm_base_add_listener(wl->xdg_shell, &xdg_shell_listener, NULL);
++   if (wl->xdg_shell)
++      xdg_wm_base_add_listener(wl->xdg_shell, &xdg_shell_listener, NULL);
+ 
+ #ifndef HAVE_LIBDECOR_H
+    /* Bind SHM based wl_buffer to wl_surface until the vulkan surface is ready.
+@@ -1048,9 +1129,11 @@ bool gfx_ctx_wl_set_video_mode_common_fullscreen(gfx_ctx_wayland_data_t *wl,
+          wl->libdecor_frame_set_fullscreen(wl->libdecor_frame, output);
+       else
+ #endif
+-      {
++      if (wl->xdg_toplevel)
+          xdg_toplevel_set_fullscreen(wl->xdg_toplevel, output);
+-      }
++      else if (wl->wl_shell_surface)
++         wl_shell_surface_set_fullscreen(wl->wl_shell_surface,
++               WL_SHELL_SURFACE_FULLSCREEN_METHOD_DEFAULT, 0, output);
+    }
+ 
+    flush_wayland_fd(&wl->input);
+diff --git a/input/common/wayland_common.c b/input/common/wayland_common.c
+index e5e523f..cb44161 100644
+--- a/input/common/wayland_common.c
++++ b/input/common/wayland_common.c
+@@ -759,6 +759,9 @@ static void wl_registry_handle_global(void *data, struct wl_registry *reg,
+    else if (string_is_equal(interface, xdg_wm_base_interface.name) && found++)
+       wl->xdg_shell = (struct xdg_wm_base*)
+          wl_registry_bind(reg, id, &xdg_wm_base_interface, MIN(version, 3));
++   else if (string_is_equal(interface, wl_shell_interface.name) && found++)
++      wl->wl_shell = (struct wl_shell*)
++         wl_registry_bind(reg, id, &wl_shell_interface, MIN(version, 1));
+    else if (string_is_equal(interface, wl_shm_interface.name) && found++)
+       wl->shm = (struct wl_shm*)wl_registry_bind(reg, id, &wl_shm_interface, MIN(version, 1));
+    else if (string_is_equal(interface, wl_seat_interface.name) && found++)
+diff --git a/input/common/wayland_common.h b/input/common/wayland_common.h
+index 7f685b6..5a525f9 100644
+--- a/input/common/wayland_common.h
++++ b/input/common/wayland_common.h
+@@ -160,6 +160,10 @@ typedef struct gfx_ctx_wayland_data
+    struct wp_fractional_scale_v1 *fractional_scale;
+    struct xdg_wm_base *xdg_shell;
+    struct xdg_toplevel *xdg_toplevel;
++   /* Legacy wl_shell fallback for compositors lacking xdg_shell
++    * (e.g. Sony PlayStation Classic Weston 1.11). */
++   struct wl_shell *wl_shell;
++   struct wl_shell_surface *wl_shell_surface;
+    struct xdg_toplevel_icon_v1 *xdg_toplevel_icon;
+    struct xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager;
+    struct wl_keyboard *wl_keyboard;

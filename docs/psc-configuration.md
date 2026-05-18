@@ -16,19 +16,21 @@ The following configuration works with RetroArch 1.22+ on PSC:
 
 ```ini
 video_driver = "gl"
-video_context_driver = "gl_sdl"
+video_context_driver = "wayland"
 audio_driver = "alsa"
 input_driver = "udev"
 menu_driver = "ozone"
 ```
+
+`gl_sdl` is also supported as a fallback (creates the GL context through SDL2's Wayland backend) but adds a layer of indirection. Prefer the native `wayland` context.
 
 ### Video Driver Options
 
 | Driver | Context | Menu Support | Status |
 |--------|---------|--------------|--------|
 | `sdl2` | N/A | RGUI only | Works |
-| `gl` | `gl_sdl` | Ozone, RGUI | Works |
-| `gl` | `wayland` | - | Fails (shell creation) |
+| `gl` | `wayland` | Ozone, RGUI | Works (native, recommended) |
+| `gl` | `gl_sdl` | Ozone, RGUI | Works (via SDL2) |
 | `gl` | `kms` | - | Fails (mode switching) |
 
 ### Menu Driver Compatibility
@@ -36,9 +38,9 @@ menu_driver = "ozone"
 | Menu | Video Driver | Status | Notes |
 |------|--------------|--------|-------|
 | RGUI | `sdl2` | Works | Basic menu, no icons |
-| RGUI | `gl` + `gl_sdl` | Works | Basic menu |
-| Ozone | `gl` + `gl_sdl` | Works | Modern menu with icons |
-| XMB | `gl` + `gl_sdl` | Fails | Shader compilation error |
+| RGUI | `gl` + `wayland` | Works | Basic menu |
+| Ozone | `gl` + `wayland` | Works | Modern menu with icons |
+| XMB | `gl` + `wayland` | Fails | Shader compilation error |
 
 ## Known Issues
 
@@ -55,17 +57,21 @@ The failing shader is the "ribbon" effect which uses GLSL features unsupported b
 
 **Workaround**: Use Ozone menu instead of XMB.
 
-### Wayland Shell Creation Failure
+### Wayland Shell Creation (resolved by patch)
 
-RetroArch's native Wayland context fails on PSC:
+Upstream RetroArch ≥ 1.7.9 only supports the modern `xdg_shell` protocol. PSC's Weston 1.11 ships the legacy `wl_shell` protocol only, so a stock build fails at startup with:
 
 ```
 [ERROR] [Wayland] Failed to create shell.
 ```
 
-PSC uses an older Weston compositor (custom Sony build) that doesn't support the shell protocol RetroArch expects.
+This build applies `patches/wl_shell_fallback.patch`, which restores the `wl_shell` code path that upstream removed in commit `8345f08`. When `xdg_shell` is absent, RetroArch now binds `wl_shell` and emits:
 
-**Solution**: Use `video_context_driver = "gl_sdl"` which creates the GL context through SDL2's Wayland backend.
+```
+[WARN] [Wayland] xdg_shell unavailable; falling back to deprecated wl_shell.
+```
+
+No runtime configuration is required — the native `wayland` context works on PSC out of the box with this build.
 
 ### KMS Mode Switching Failure
 
@@ -168,7 +174,7 @@ Common causes:
 
 ### Black Screen with Audio
 
-Video context mismatch. Ensure `video_context_driver = "gl_sdl"` when using `video_driver = "gl"`.
+Video context mismatch. With `video_driver = "gl"`, set `video_context_driver = "wayland"` (or `gl_sdl` as a fallback). Leaving the context unset lets RetroArch try `kms` first, which fails on PSC.
 
 ### Controller Not Working
 

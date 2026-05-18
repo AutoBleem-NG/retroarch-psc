@@ -233,6 +233,11 @@ RUN git config --global http.postBuffer 524288000 && \
 WORKDIR /build/RetroArch
 RUN git submodule update --init --recursive --depth 1
 
+# Restore wl_shell fallback for PSC's Weston 1.11 (only supports wl_shell,
+# not xdg_shell). Upstream removed wl_shell in 8345f08 (RA 1.7.9).
+COPY patches/wl_shell_fallback.patch /build/RetroArch/patches/wl_shell_fallback.patch
+RUN git apply /build/RetroArch/patches/wl_shell_fallback.patch
+
 # Copy PSC-specific Makefile
 COPY Makefile.psc /build/RetroArch/Makefile.psc
 
