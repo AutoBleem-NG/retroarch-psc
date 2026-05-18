@@ -25,12 +25,12 @@ Full driver/menu matrix and troubleshooting: [docs/psc-configuration.md](docs/ps
 
 ## Patches
 
-- `alsa_force_s16_psc_mtk.patch` — forces ALSA S16_LE on PSC's MT8167 (which mis-advertises FLOAT support).
-- `wl_shell_fallback.patch` — Wayland fallback for PSC's Weston 1.11 (no `xdg_shell`).
-- `xmb_ribbon_drop_oes_derivatives_ext.patch` — fixes the XMB ribbon shader on PowerVR Rogue.
-- `xmb_shader_pipeline_psc_limit.patch` — hides pipeline options too slow for PSC; only "Off" and "Ribbon Simplified" are exposed.
-
-See [docs/psc-configuration.md](docs/psc-configuration.md) for the why.
+| Patch | Description |
+|-------|-------------|
+| `alsa_force_s16_psc_mtk.patch` | Forces ALSA S16_LE on PSC's MT8167 (which mis-advertises FLOAT support). |
+| `wl_shell_fallback.patch` | Wayland fallback for PSC's Weston 1.11 (no `xdg_shell`). |
+| `xmb_ribbon_drop_oes_derivatives_ext.patch` | Fixes the XMB ribbon shader on PowerVR Rogue. |
+| `xmb_shader_pipeline_psc_limit.patch` | Hides pipeline options too slow for PSC; only "Off" and "Ribbon Simplified" are exposed. |
 
 ## Target
 
@@ -38,4 +38,4 @@ ARMv8-A Cortex-A35 · crosstool-ng GCC 9 · glibc 2.23 · all 18 runtime depende
 
 ## License
 
-GPL-3.0 — based on [retroarch-cross-compile](https://github.com/zoltanvb/retroarch-cross-compile) by Zoltan Baldaszti.
+GPL-3.0 - based on [retroarch-cross-compile](https://github.com/zoltanvb/retroarch-cross-compile) by Zoltan Baldaszti.

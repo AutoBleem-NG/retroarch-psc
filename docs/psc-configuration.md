@@ -5,7 +5,7 @@
 - **SoC**: MediaTek MT8167 (ARM Cortex-A35 quad-core)
 - **GPU**: PowerVR Rogue GE8300 (OpenGL ES 3.2)
 - **Kernel**: Linux 4.4.22, glibc 2.24
-- **Display**: Weston 1.11 (Wayland, `wl_shell` only — no `xdg_shell`)
+- **Display**: Weston 1.11 (Wayland, `wl_shell` only - no `xdg_shell`)
 
 The MT8167 family is commonly documented as shipping with Mali-T720, but PSC units actually report PowerVR Rogue GE8300. PowerVR's GLSL compiler is stricter about extensions — relevant for [`xmb_ribbon_drop_oes_derivatives_ext.patch`](../patches/xmb_ribbon_drop_oes_derivatives_ext.patch).
 
@@ -23,7 +23,7 @@ menu_driver = "xmb"   # or "ozone" / "rgui"
 |--------------|----------|------------------|--------|
 | `gl`         | `wayland`| XMB, Ozone, RGUI | ✅ recommended |
 | `gl`         | `gl_sdl` | XMB, Ozone, RGUI | ✅ fallback |
-| `gl`         | `kms`    | —                | ❌ conflicts with Weston |
+| `gl`         | `kms`    | -                | ❌ conflicts with Weston |
 | `sdl2`       | —        | RGUI only        | ✅ |
 
 ## libstdc++
