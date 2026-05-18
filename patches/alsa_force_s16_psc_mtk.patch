@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+Subject: [PATCH] alsa: force S16_LE on PSC — MTK driver lies about FLOAT support
+
+The MT8167 ALSA driver returns 0 (success) from
+snd_pcm_hw_params_test_format() for SND_PCM_FORMAT_FLOAT, but then
+rejects the committed hw_params with EINVAL.  RetroArch's alsa_init_pcm
+has no retry path after that failure, so audio init fails entirely.
+
+Force SND_PCM_FORMAT_S16 unconditionally for this PSC build.  The PSC
+has no use case that benefits from float samples, and S16 is confirmed
+working with the MTK driver.
+---
+ audio/common/alsa.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/audio/common/alsa.c b/audio/common/alsa.c
+index 7f6ba13..3519275 100644
+--- a/audio/common/alsa.c
++++ b/audio/common/alsa.c
+@@ -74,9 +74,10 @@ int alsa_init_pcm(snd_pcm_t **pcm,
+       goto error;
+    }
+
+-   format = (snd_pcm_hw_params_test_format(*pcm, params, SND_PCM_FORMAT_FLOAT) == 0)
+-         ? SND_PCM_FORMAT_FLOAT : SND_PCM_FORMAT_S16;
+-   stream_info->has_float = (format == SND_PCM_FORMAT_FLOAT);
++   /* PSC MTK audio driver reports SND_PCM_FORMAT_FLOAT as supported via
++    * test_format but rejects it with EINVAL in snd_pcm_hw_params. Force S16. */
++   format = SND_PCM_FORMAT_S16;
++   stream_info->has_float = false;
+
+    RARCH_LOG("[ALSA] Using %s sample format for %s device \"%s\".\n",
+          snd_pcm_format_name(format),

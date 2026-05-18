@@ -100,12 +100,6 @@ Two-stage Docker build:
 
 `-mfpu=neon-vfpv4` (not `neon-fp-armv8`) is intentional: the PSC kernel's HWCAP advertises only VFPV3/VFPV4 even though the silicon is ARMv8, so emitting ARMv8 FPU instructions traps at runtime.
 
-## Patches
-
-`patches/wl_shell_fallback.patch` is applied during the Docker build. It restores the legacy `wl_shell` code path that upstream RetroArch removed in commit `8345f08` (RA 1.7.9). PSC's Weston 1.11 only advertises `wl_shell` (not `xdg_shell`), so without this patch the native Wayland context fails at startup with `[Wayland] Failed to create shell.`
-
-When `xdg_shell` is absent at runtime, RetroArch now binds `wl_shell` and logs a warning instead of bailing out.
-
 ## Build Features
 
 Enabled:

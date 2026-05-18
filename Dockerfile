@@ -244,6 +244,12 @@ RUN git apply /build/RetroArch/patches/wl_shell_fallback.patch
 COPY patches/xmb_ribbon_drop_oes_derivatives_ext.patch /build/RetroArch/patches/xmb_ribbon_drop_oes_derivatives_ext.patch
 RUN git apply /build/RetroArch/patches/xmb_ribbon_drop_oes_derivatives_ext.patch
 
+# Force S16_LE for ALSA: the PSC's MT8167 driver falsely reports FLOAT as
+# supported via test_format, then rejects it with EINVAL in snd_pcm_hw_params.
+# RA has no retry path, so audio init fails entirely without this patch.
+COPY patches/alsa_force_s16_psc_mtk.patch /build/RetroArch/patches/alsa_force_s16_psc_mtk.patch
+RUN git apply /build/RetroArch/patches/alsa_force_s16_psc_mtk.patch
+
 # Copy PSC-specific Makefile
 COPY Makefile.psc /build/RetroArch/Makefile.psc
 

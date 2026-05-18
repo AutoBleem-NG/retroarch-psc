@@ -7,9 +7,10 @@
 # - HAVE_C_A7A7 is for Cortex-A7 (NES/SNES Classic) and would override our
 #   Cortex-A35 flags. HAVE_CLASSIC=1 is a harmless no-op in v1.22.2.
 #
-# - --enable-floathard is omitted: the MTK soc audio driver rejects
-#   SND_PCM_FORMAT_FLOAT_LE (EINVAL on snd_pcm_hw_params), and RA v1.22.2's
-#   alsa driver doesn't fall back to S16_LE — audio init fails entirely.
+# - --enable-floathard is a CPU FP-ABI flag and does not affect ALSA format
+#   selection. The actual audio fix is patches/alsa_force_s16_psc_mtk.patch:
+#   the MT8167 driver falsely reports FLOAT support in test_format, then
+#   rejects it with EINVAL in snd_pcm_hw_params; the patch forces S16_LE.
 #
 # - -mfpu=neon-vfpv4, NOT neon-fp-armv8: PSC kernel HWCAP advertises only
 #   VFPV3/VFPV4 even though the silicon is ARMv8. neon-fp-armv8 emits
