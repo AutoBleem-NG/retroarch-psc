@@ -1,0 +1,26 @@
+Guard the GL_OES_standard_derivatives extension request with __VERSION__ < 300.
+
+On PSC's PowerVR Rogue GE8300 (GLES 3.2), gl_glsl_compile_shader rewrites
+the macro's "#version 130" header to "#version 300 es". Derivatives are
+core in GLSL ES 3.0+, and Imagination's compiler hard-errors on the
+now-meaningless OES extension declaration with an opaque "Compile failed.",
+which kills the XMB ribbon fragment shader (program #62) and crashes RA
+with "[GL] GL: Invalid value" → "Cannot open video driver".
+
+Wrapping the #extension line in `#if __VERSION__ < 300` keeps the GLES 2.0
+fallback intact (where the extension IS required for dFdx/dFdy) while
+letting GLES 3.0+ drivers compile the shader as plain core ES.
+
+diff --git a/gfx/drivers/gl_shaders/shaders_common.h b/gfx/drivers/gl_shaders/shaders_common.h
+--- a/gfx/drivers/gl_shaders/shaders_common.h
++++ b/gfx/drivers/gl_shaders/shaders_common.h
+@@ -14,7 +14,9 @@
+                   "  precision mediump float;\n" \
+                   "#endif\n" #src
+ #define GLSL_STANDARD_DERIVATIVES(src) "#version 130\n" \
++                  "#if __VERSION__ < 300\n" \
+                   "#extension GL_OES_standard_derivatives : enable\n" \
++                  "#endif\n" \
+                   "#ifdef GL_ES\n" \
+                   "  #ifdef GL_FRAGMENT_PRECISION_HIGH\n" \
+                   "    precision highp float;\n" \

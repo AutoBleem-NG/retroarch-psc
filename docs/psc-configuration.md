@@ -1,125 +1,44 @@
 # RetroArch Configuration for PlayStation Classic
 
-Runtime configuration reference for RetroArch on PSC hardware.
+## Hardware
 
-## PSC Hardware Specifications
+- **SoC**: MediaTek MT8167 (ARM Cortex-A35 quad-core)
+- **GPU**: PowerVR Rogue GE8300 (OpenGL ES 3.2)
+- **Kernel**: Linux 4.4.22, glibc 2.24
+- **Display**: Weston 1.11 (Wayland, `wl_shell` only — no `xdg_shell`)
 
-- **SoC**: MediaTek MT8167A (ARM Cortex-A35 quad-core)
-- **GPU**: Mali-T720 MP2 (OpenGL ES 3.1)
-- **Kernel**: Linux 4.4.22
-- **Display Server**: Weston (Wayland compositor)
-- **glibc**: 2.24 (GCC 6.2.0)
+The MT8167 family is commonly documented as shipping with Mali-T720, but PSC units actually report PowerVR Rogue GE8300. PowerVR's GLSL compiler is stricter about extensions — relevant for [`xmb_ribbon_drop_oes_derivatives_ext.patch`](../patches/xmb_ribbon_drop_oes_derivatives_ext.patch).
 
 ## Working Configuration
-
-The following configuration works with RetroArch 1.22+ on PSC:
 
 ```ini
 video_driver = "gl"
 video_context_driver = "wayland"
-audio_driver = "alsa"
-input_driver = "udev"
-menu_driver = "ozone"
+menu_driver = "xmb"   # or "ozone" / "rgui"
 ```
 
-`gl_sdl` is also supported as a fallback (creates the GL context through SDL2's Wayland backend) but adds a layer of indirection. Prefer the native `wayland` context.
+`gl_sdl` works as a fallback context (GL via SDL2/Wayland) but adds indirection. Don't leave `video_context_driver` unset — RA will try KMS first, which Weston blocks.
 
-### Video Driver Options
+| video_driver | context  | menu drivers     | status |
+|--------------|----------|------------------|--------|
+| `gl`         | `wayland`| XMB, Ozone, RGUI | ✅ recommended |
+| `gl`         | `gl_sdl` | XMB, Ozone, RGUI | ✅ fallback |
+| `gl`         | `kms`    | —                | ❌ conflicts with Weston |
+| `sdl2`       | —        | RGUI only        | ✅ |
 
-| Driver | Context | Menu Support | Status |
-|--------|---------|--------------|--------|
-| `sdl2` | N/A | RGUI only | Works |
-| `gl` | `wayland` | Ozone, RGUI | Works (native, recommended) |
-| `gl` | `gl_sdl` | Ozone, RGUI | Works (via SDL2) |
-| `gl` | `kms` | - | Fails (mode switching) |
+## Patches (applied at build time)
 
-### Menu Driver Compatibility
+- **`wl_shell_fallback.patch`** — restores the legacy `wl_shell` code path (removed upstream in `8345f08`, RA 1.7.9). Without it: `[ERROR] [Wayland] Failed to create shell.` With it: `[WARN] [Wayland] xdg_shell unavailable; falling back to deprecated wl_shell.`
 
-| Menu | Video Driver | Status | Notes |
-|------|--------------|--------|-------|
-| RGUI | `sdl2` | Works | Basic menu, no icons |
-| RGUI | `gl` + `wayland` | Works | Basic menu |
-| Ozone | `gl` + `wayland` | Works | Modern menu with icons |
-| XMB | `gl` + `wayland` | Fails | Shader compilation error |
+- **`xmb_ribbon_drop_oes_derivatives_ext.patch`** — guards `#extension GL_OES_standard_derivatives : enable` with `#if __VERSION__ < 300`. The XMB ribbon fragment shader is wrapped in a `#version 130` placeholder that `shader_glsl.c:381` promotes to `#version 300 es` on GLES3 hardware. Derivatives are core in ES 3.0+, but PowerVR Rogue hard-errors on the now-redundant extension request with `[GLSL] Shader log: Compile failed.` → `[GL] GL: Invalid value` → `Cannot open video driver`.
 
-## Known Issues
+## libstdc++
 
-### XMB Menu Shader Failure (1.22+)
+PSC firmware ships `libstdc++.so.6.0.22` with `GLIBCXX_3.4.22`. Older RetroBoot installs that bundle a stale `libstdc++.so.6` should be replaced with `/usr/lib/libstdc++.so.6.0.22` from the PSC.
 
-XMB requires advanced GLSL shaders that the Mali-T720 GPU cannot compile in RetroArch 1.22+:
+## Input
 
-```
-[ERROR] [GLSL] Failed to compile fragment shader #62.
-[ERROR] [GLSL] Failed to link program #62.
-```
-
-The failing shader is the "ribbon" effect which uses GLSL features unsupported by the Mali GPU's OpenGL ES implementation.
-
-**Workaround**: Use Ozone menu instead of XMB.
-
-### Wayland Shell Creation (resolved by patch)
-
-Upstream RetroArch ≥ 1.7.9 only supports the modern `xdg_shell` protocol. PSC's Weston 1.11 ships the legacy `wl_shell` protocol only, so a stock build fails at startup with:
-
-```
-[ERROR] [Wayland] Failed to create shell.
-```
-
-This build applies `patches/wl_shell_fallback.patch`, which restores the `wl_shell` code path that upstream removed in commit `8345f08`. When `xdg_shell` is absent, RetroArch now binds `wl_shell` and emits:
-
-```
-[WARN] [Wayland] xdg_shell unavailable; falling back to deprecated wl_shell.
-```
-
-No runtime configuration is required — the native `wayland` context works on PSC out of the box with this build.
-
-### KMS Mode Switching Failure
-
-When Wayland fails, RetroArch falls back to KMS/DRM which also fails:
-
-```
-[INFO] [KMS] New FB: 1920x1080 (stride: 7680).
-[ERROR] [KMS] Error when switching mode.
-```
-
-The PSC's display is managed by Weston, so direct KMS access conflicts with it.
-
-**Solution**: Use SDL2 context instead of direct KMS.
-
-## Library Requirements
-
-All required libraries are present on stock PSC firmware. RetroArch dynamically links against 18 libraries:
-
-| Library | Purpose | PSC Version |
-|---------|---------|-------------|
-| libasound.so.2 | ALSA audio | 2.0.0 |
-| libfreetype.so.6 | Font rendering | 6.12.5 |
-| libwayland-egl.so.1 | Wayland EGL | 1.0.0 |
-| libwayland-client.so.0 | Wayland client | 0.3.0 |
-| libwayland-cursor.so.0 | Wayland cursor | 0.0.0 |
-| libxkbcommon.so.0 | Keyboard handling | 0.0.0 |
-| libSDL2-2.0.so.0 | Input/joystick | 0.4.0 |
-| libGLESv2.so.2 | OpenGL ES 2.0 | 2.0.0 |
-| libEGL.so.1 | EGL | 1.0.0 |
-| libgbm.so.1 | Generic buffer mgmt | 1.0.0 |
-| libdrm.so.2 | Direct rendering | 2.4.0 |
-| libudev.so.1 | Device hotplug | 1.6.4 |
-| libstdc++.so.6 | C++ standard library | 6.0.22 |
-| libc.so.6 | C library | 2.24 |
-| libm.so.6 | Math library | 2.24 |
-| libpthread.so.0 | Threading | 2.24 |
-| librt.so.1 | Realtime extensions | 2.24 |
-| libdl.so.2 | Dynamic linking | 2.24 |
-
-### libstdc++ Note
-
-PSC firmware includes `libstdc++.so.6.0.22` with `GLIBCXX_3.4.22`. If using older RetroBoot installations that bundle an older libstdc++, replace it with PSC's native version from `/usr/lib/libstdc++.so.6.0.22`.
-
-## Input Configuration
-
-### Controller Autoconfig
-
-The `input_driver` must match the autoconfig files. PSC controller autoconfig files use `udev`:
+`input_driver` must match the autoconfig files. PSC's `PlayStation_Classic_Controller.cfg` uses `udev`:
 
 ```ini
 input_driver = "udev"
@@ -127,65 +46,13 @@ input_autodetect_enable = true
 joypad_autoconfig_dir = "/media/retroarch/autoconfig"
 ```
 
-The stock PSC controller config is `PlayStation_Classic_Controller.cfg`.
-
-## Directory Structure
-
-```
-/media/retroarch/
-├── retroarch              # Main binary
-├── retroarch.cfg          # Main configuration
-├── assets/                # Menu assets (icons, fonts)
-│   ├── ozone/
-│   ├── xmb/
-│   └── glui/
-├── cores/                 # Libretro cores (.so files)
-├── info/                  # Core info files
-├── autoconfig/            # Controller autoconfig
-├── retroboot/
-│   ├── lib/               # Additional libraries
-│   │   ├── libstdc++.so.6
-│   │   └── liblzma.so.5
-│   └── bin/               # Launch scripts
-└── system/                # BIOS files
-```
-
-## Updating Assets
-
-Assets should match the RetroArch version. Download from:
-https://github.com/libretro/retroarch-assets
-
-Required directories:
-- `ozone/` - Ozone theme assets (recommended)
-- `glui/` - GLUI/MaterialUI assets
-- `sounds/` - Menu sounds
-- `fonts/` - Font files
-
 ## Troubleshooting
 
-### RetroArch Exits Immediately
+Log: `/media/retroarch/logs/retroarch.log` (enable via `log_verbosity = "true"` and `log_to_file = "true"`).
 
-Check `/media/retroarch/logs/retroarch.log` for errors.
-
-Common causes:
-1. Video driver initialization failure
-2. Missing libraries (check GLIBCXX version)
-3. Missing assets for menu driver
-
-### Black Screen with Audio
-
-Video context mismatch. With `video_driver = "gl"`, set `video_context_driver = "wayland"` (or `gl_sdl` as a fallback). Leaving the context unset lets RetroArch try `kms` first, which fails on PSC.
-
-### Controller Not Working
-
-Verify `input_driver` matches autoconfig files. Use `udev` for PSC controllers.
-
-### Menu Falls Back to RGUI
-
-The configured menu driver failed to initialize (usually due to missing assets or shader compilation failure). Check logs for specific error.
-
-## References
-
-- [RetroArch Documentation](https://docs.libretro.com/)
-- [PSC Specifications](https://en.wikipedia.org/wiki/PlayStation_Classic)
-- [Mali-T720 OpenGL ES Support](https://developer.arm.com/ip-products/graphics-and-multimedia/mali-gpus/mali-t720-gpu)
+| Symptom | Likely cause |
+|---------|--------------|
+| Exits immediately at startup | Video driver init — check the log for shader/EGL errors |
+| Black screen with audio | `video_context_driver` unset → tried KMS; set it to `wayland` |
+| Menu falls back to RGUI | Configured menu driver failed (missing assets or shader compile error) |
+| Controller dead | `input_driver` doesn't match the autoconfig file (use `udev`) |

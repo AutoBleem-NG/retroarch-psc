@@ -18,16 +18,17 @@ This binary is **not** a drop-in replacement for older PSC RetroArch builds. Ret
 ```ini
 video_driver = "gl"
 video_context_driver = "wayland"
-menu_driver = "ozone"
+menu_driver = "xmb"   # or "ozone" / "rgui"
 ```
-
-XMB does not work — the Mali-T720 cannot compile the updated ribbon shader. Use Ozone or RGUI.
 
 Full driver/menu matrix and troubleshooting: [docs/psc-configuration.md](docs/psc-configuration.md).
 
 ## Patches
 
-`patches/wl_shell_fallback.patch` restores the legacy `wl_shell` code path that upstream removed in RA 1.7.9. PSC's Weston 1.11 only advertises `wl_shell`, not `xdg_shell`, so without the patch the native Wayland context fails at startup with `[Wayland] Failed to create shell.`
+- `wl_shell_fallback.patch` — Wayland fallback for PSC's Weston 1.11 (no `xdg_shell`).
+- `xmb_ribbon_drop_oes_derivatives_ext.patch` — fixes the XMB ribbon shader on PowerVR Rogue.
+
+See [docs/psc-configuration.md](docs/psc-configuration.md) for the why.
 
 ## Target
 

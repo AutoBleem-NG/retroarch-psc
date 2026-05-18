@@ -238,6 +238,12 @@ RUN git submodule update --init --recursive --depth 1
 COPY patches/wl_shell_fallback.patch /build/RetroArch/patches/wl_shell_fallback.patch
 RUN git apply /build/RetroArch/patches/wl_shell_fallback.patch
 
+# Skip the OES_standard_derivatives extension request when the runtime
+# promotes the XMB ribbon shader to "#version 300 es" — PowerVR Rogue
+# rejects the now-meaningless extension and refuses to compile the shader.
+COPY patches/xmb_ribbon_drop_oes_derivatives_ext.patch /build/RetroArch/patches/xmb_ribbon_drop_oes_derivatives_ext.patch
+RUN git apply /build/RetroArch/patches/xmb_ribbon_drop_oes_derivatives_ext.patch
+
 # Copy PSC-specific Makefile
 COPY Makefile.psc /build/RetroArch/Makefile.psc
 
