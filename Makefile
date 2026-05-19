@@ -18,12 +18,12 @@ all: build extract
 # Build the Docker image
 build:
 	@echo "Building RetroArch for PSC..."
-	docker build -t $(IMAGE_NAME) .
+	docker build --build-arg PSC_BUILD_NUM=$(BUILD_NUM) -t $(IMAGE_NAME) .
 
 # Build without cache
 rebuild:
 	@echo "Building RetroArch for PSC (no cache)..."
-	docker build --no-cache -t $(IMAGE_NAME) .
+	docker build --no-cache --build-arg PSC_BUILD_NUM=$(BUILD_NUM) -t $(IMAGE_NAME) .
 
 # Extract binary from image
 extract:

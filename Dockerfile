@@ -96,8 +96,10 @@ LABEL description="Docker build environment for RetroArch - PlayStation Classic 
 
 ARG UPX_VERSION
 ARG RETROARCH_VERSION
+ARG PSC_BUILD_NUM=1
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PSC_BUILD_NUM=${PSC_BUILD_NUM}
 
 # ==============================================================================
 # Install Build Dependencies

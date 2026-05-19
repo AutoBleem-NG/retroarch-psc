@@ -15,6 +15,10 @@
 # - -mfpu=neon-vfpv4, NOT neon-fp-armv8: PSC kernel HWCAP advertises only
 #   VFPV3/VFPV4 even though the silicon is ARMv8. neon-fp-armv8 emits
 #   instructions for an FPU the runtime denies having.
+#
+# - RetroArch's --enable-neon injects a late NEON_CFLAGS=-mfpu=neon, which
+#   overrides the earlier PSC FPU flag. Keep NEON_CFLAGS/NEON_ASFLAGS aligned
+#   with the PSC target when invoking make.
 
 TARGET := retroarch
 
@@ -56,7 +60,11 @@ retroarch:
 		--enable-neon \
 		--enable-sdl2 \
 		--disable-discord && \
-	make HAVE_CLASSIC=1 -j && \
+	make HAVE_CLASSIC=1 \
+		GIT_VERSION="autobleem-ng-$(PSC_BUILD_NUM)" \
+		NEON_CFLAGS="-mfpu=neon-vfpv4" \
+		NEON_ASFLAGS="-mfpu=neon-vfpv4" \
+		-j && \
 	/opt/x-tools/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -v retroarch
 
 clean:
